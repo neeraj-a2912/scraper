@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from linkedin_jobs_scraper import LinkedinScraper
 from linkedin_jobs_scraper.events import Events, EventData
-from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters, ExperienceLevelFilters
+from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
 
 # ===== CONFIG =====
 ROLES = [
@@ -75,21 +75,14 @@ scraper.on(Events.END, on_end)
 # ===== QUERIES =====
 queries = []
 for role in ROLES:
-    queries.append(
-        Query(
-            query=role,
-            options=QueryOptions(
-                locations=[LOCATION],
-                filters=QueryFilters(
-                    experience=[
-                        ExperienceLevelFilters.ENTRY_LEVEL,
-                        ExperienceLevelFilters.ASSOCIATE
-                    ]
-                ),
-                limit=50
-            )
+    queries.append(Query(
+        query=role,
+        options=QueryOptions(
+            locations=[LOCATION],
+            filters=QueryFilters(),
+            limit=200
         )
-    )
+    ))
 
 # Run scraper
 scraper.run(queries)
