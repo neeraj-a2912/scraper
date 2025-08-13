@@ -80,7 +80,7 @@ for role in ROLES:
         options=QueryOptions(
             locations=[LOCATION],
             filters=QueryFilters(),
-            limit=200
+            limit=50
         )
     ))
 
