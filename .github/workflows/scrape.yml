@@ -2,7 +2,7 @@ name: Daily LinkedIn Jobs Scraper
 
 on:
   schedule:
-    - cron: "0 3 * * *"   # Runs daily at 3:00 UTC
+    - cron: "30 2 * * *"   # Runs daily at 3:00 UTC
   workflow_dispatch:      # Optional manual run
 
 jobs:
