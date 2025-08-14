@@ -43,8 +43,7 @@ def on_data(data: EventData):
         "location": data.place,
         "city": city,
         "date": data.date,
-        "link": data.link,
-        "description": data.description
+        "link": data.link
     })
 
 def on_error(error):
