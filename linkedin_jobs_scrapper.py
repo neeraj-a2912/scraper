@@ -1,11 +1,14 @@
 import os
-import pandas as pd
-from datetime import datetime, timedelta
+import csv
+import glob
+from datetime import datetime
 from linkedin_jobs_scraper import LinkedinScraper
-from linkedin_jobs_scraper.events import Events, EventData
 from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
+from linkedin_jobs_scraper.events import Events, EventData, DataEvent, EndEvent, ErrorEvent
 
-# ===== CONFIG =====
+# ==============================
+# CONFIG
+# ==============================
 ROLES = [
     "Data Engineer",
     "Software Engineer",
@@ -14,64 +17,36 @@ ROLES = [
     "ML Engineer"
 ]
 LOCATION = "India"
-BASE_DIR = "data"
+RESULTS_PER_ROLE = 100  # Number of jobs per role
 
-today = datetime.today()
-year_folder = os.path.join(BASE_DIR, str(today.year))
-month_folder = os.path.join(year_folder, f"{today.month:02d}")
-os.makedirs(month_folder, exist_ok=True)
+# ==============================
+# SCRAPER SETUP
+# ==============================
+results = []
 
-file_name = f"{today.strftime('%d')}.csv"
-file_path = os.path.join(month_folder, file_name)
+def on_data(data: DataEvent):
+    results.append(data)
 
-# ===== SCRAPER =====
+def on_error(error: ErrorEvent):
+    print("[Error]", error)
+
+def on_end(end: EndEvent):
+    print("[End] Finished scraping")
+
 scraper = LinkedinScraper(
-    headless=True,           # run in background on GitHub Actions
-    max_workers=1,           # sequential scraping
-    slow_mo=2,               # 2-second delay between actions
-    page_load_timeout=60     # wait max 60s for page to load
+    headless=True,      # run browser in headless mode
+    max_workers=1,      # number of concurrent browser tabs
+    slow_mo=0.5,        # slow down scraping (avoid blocks)
+    page_load_timeout=60
 )
 
-all_jobs = []
-
-# ===== EVENT HANDLERS =====
-def on_data(data: EventData):
-    city = data.place.split(",")[0].strip() if data.place else None
-    all_jobs.append({
-        "title": data.title,
-        "company": data.company,
-        "location": data.place,
-        "city": city,
-        "date": data.date,
-        "link": data.link
-    })
-
-def on_error(error):
-    print(f"Error: {error}")
-
-def on_end():
-    # Remove duplicates from yesterday
-    yesterday = today - timedelta(days=1)
-    yesterday_file = os.path.join(
-        year_folder if yesterday.year == today.year else os.path.join(BASE_DIR, str(yesterday.year)),
-        f"{yesterday.month:02d}",
-        f"{yesterday.strftime('%d')}.csv"
-    )
-
-    df_today = pd.DataFrame(all_jobs)
-    if os.path.exists(yesterday_file):
-        df_yesterday = pd.read_csv(yesterday_file)
-        df_today = df_today[~df_today["link"].isin(df_yesterday["link"])]
-
-    df_today.to_csv(file_path, index=False)
-    print(f"Saved {len(df_today)} new jobs to {file_path}")
-
-# Attach events
 scraper.on(Events.DATA, on_data)
 scraper.on(Events.ERROR, on_error)
 scraper.on(Events.END, on_end)
 
-# ===== QUERIES =====
+# ==============================
+# QUERIES
+# ==============================
 queries = []
 for role in ROLES:
     queries.append(Query(
@@ -79,9 +54,47 @@ for role in ROLES:
         options=QueryOptions(
             locations=[LOCATION],
             filters=QueryFilters(),
-            limit=50
+            limit=RESULTS_PER_ROLE
         )
     ))
 
-# Run scraper
 scraper.run(queries)
+
+# ==============================
+# DEDUPLICATION (MONTH-BY-MONTH)
+# ==============================
+now = datetime.now()
+year, month, day = now.strftime("%Y"), now.strftime("%m"), now.strftime("%d")
+
+month_folder = os.path.join("data", year, month)
+os.makedirs(month_folder, exist_ok=True)
+
+# Collect all previously seen job links this month
+seen_links = set()
+for file in glob.glob(os.path.join(month_folder, "*.csv")):
+    with open(file, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            seen_links.add(row["link"])
+
+# Filter out duplicates
+unique_results = [job for job in results if job.link not in seen_links]
+
+# ==============================
+# SAVE TODAY'S FILE
+# ==============================
+file_path = os.path.join(month_folder, f"{day}.csv")
+
+with open(file_path, "w", newline="", encoding="utf-8") as f:
+    writer = csv.DictWriter(f, fieldnames=["title", "company", "location", "date", "link"])
+    writer.writeheader()
+    for job in unique_results:
+        writer.writerow({
+            "title": job.title,
+            "company": job.company,
+            "location": job.location,
+            "date": job.date,
+            "link": job.link
+        })
+
+print(f"✅ Saved {len(unique_results)} new jobs to {file_path}")
