@@ -96,7 +96,7 @@ with open(file_path, "w", newline="", encoding="utf-8") as f:
         writer.writerow({
             "title": job.title,
             "company": job.company,
-            "city": city.strip(),
+            "city": city,
             "date": job.date,
             "link": job.link
         })
