@@ -4,7 +4,7 @@ import glob
 from datetime import datetime
 from linkedin_jobs_scraper import LinkedinScraper
 from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
-from linkedin_jobs_scraper.events import Events, EventData, DataEvent, EndEvent, ErrorEvent
+from linkedin_jobs_scraper.events import Events
 
 # ==============================
 # CONFIG
@@ -17,20 +17,20 @@ ROLES = [
     "ML Engineer"
 ]
 LOCATION = "India"
-RESULTS_PER_ROLE = 100  # Number of jobs per role
+RESULTS_PER_ROLE = 200  # Number of jobs per role
 
 # ==============================
 # SCRAPER SETUP
 # ==============================
 results = []
 
-def on_data(data: DataEvent):
+def on_data(data):
     results.append(data)
 
-def on_error(error: ErrorEvent):
+def on_error(error):
     print("[Error]", error)
 
-def on_end(end: EndEvent):
+def on_end():
     print("[End] Finished scraping")
 
 scraper = LinkedinScraper(
