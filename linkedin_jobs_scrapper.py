@@ -86,15 +86,20 @@ unique_results = [job for job in results if job.link not in seen_links]
 file_path = os.path.join(month_folder, f"{day}.csv")
 
 with open(file_path, "w", newline="", encoding="utf-8") as f:
-    writer = csv.DictWriter(f, fieldnames=["title", "company", "location", "date", "link"])
+    writer = csv.DictWriter(
+        f,
+        fieldnames=["title", "company", "city", "date", "link"]
+    )
     writer.writeheader()
     for job in unique_results:
+        city = job.location.split(",")[0] if job.location else ""
         writer.writerow({
             "title": job.title,
             "company": job.company,
-            "location": job.location,
+            "city": city.strip(),
             "date": job.date,
             "link": job.link
         })
+
 
 print(f"✅ Saved {len(unique_results)} new jobs to {file_path}")
