@@ -88,15 +88,17 @@ file_path = os.path.join(month_folder, f"{day}.csv")
 with open(file_path, "w", newline="", encoding="utf-8") as f:
     writer = csv.DictWriter(
         f,
-        fieldnames=["title", "company", "city", "date", "link"]
+        fieldnames=["title", "company", "location", "city", "date", "link"]
     )
     writer.writeheader()
     for job in unique_results:
-        city = job.location.split(",")[0] if job.location else ""
+        location = job.location if job.location else ""
+        city = location.split(",")[0].strip() if location else ""
         writer.writerow({
             "title": job.title,
             "company": job.company,
-            "city": city,
+            "location": location,   # full location
+            "city": city,           # extracted city
             "date": job.date,
             "link": job.link
         })
